@@ -10,13 +10,14 @@ const BLOCKED_IP_TABLE: &str = "blocked_ip"; // ip text, cause text
 
 pub async fn ratelimit(database: Data<DatabaseConnection>, cur_ip: String) -> i16 {
     let ctime: u64 = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Err(_) => return 500,
+        Err(_) => return 500, // clock went backwards in time
         Ok(x) => x.as_secs(),
     };
 
     match database
         .get_ref()
         .query_all(Statement {
+            // check if its already blocked
             sql: format!("select * from {} WHERE ip = ? ", BLOCKED_IP_TABLE),
             values: Some(Values(vec![Value::String(Some(Box::new(cur_ip.clone())))])),
             db_backend: Backend,
@@ -27,7 +28,8 @@ pub async fn ratelimit(database: Data<DatabaseConnection>, cur_ip: String) -> i1
         Ok(x) => {
             let reason: Vec<String> = x.iter().map(|y| y.try_get_by("cause").unwrap()).collect();
             if !reason.is_empty() {
-                return 403;
+                return 403; // deny if found, for now only one cause is present, more has to be
+                // accounted for
             }
         }
     };
@@ -35,6 +37,7 @@ pub async fn ratelimit(database: Data<DatabaseConnection>, cur_ip: String) -> i1
     let table: Vec<u64> = match database
         .query_all(Statement {
             sql: format!(
+                // filter for the connection IP
                 "SELECT time, ip FROM {} WHERE ip = ? ORDER BY -time",
                 IP_TABLE
             ),
@@ -51,7 +54,7 @@ pub async fn ratelimit(database: Data<DatabaseConnection>, cur_ip: String) -> i1
             let rows: Vec<u64> = x
                 .iter()
                 .map(|result| result.try_get_by("time").unwrap())
-                .collect();
+                .collect(); // sort by time difference from current time
             rows.iter().map(|time| ctime - time).collect()
         }
     };
@@ -65,6 +68,7 @@ pub async fn ratelimit(database: Data<DatabaseConnection>, cur_ip: String) -> i1
             .collect();
         for (amount, _) in recent {
             if amount > 7 {
+                // for now the limit is 7 requests per second
                 match database
                     .execute(Statement {
                         sql: format!("INSERT INTO {} VALUES ( ? , ? );", BLOCKED_IP_TABLE),

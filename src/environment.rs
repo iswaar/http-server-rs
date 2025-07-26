@@ -14,6 +14,7 @@ pub mod retreive {
             }
         }
     }
+
     pub mod mariadb {
         use std::env::VarError::{NotPresent, NotUnicode};
         use std::env::var;
