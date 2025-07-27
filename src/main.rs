@@ -6,14 +6,12 @@ use crate::environment::retreive::{
     mariadb::{get_database, get_host, get_password, get_user},
     system::get_ip,
 };
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, web};
+use actix_web::{App, HttpServer, web};
 use endpoints::api::endpoint as api;
+use endpoints::root::endpoint as root;
 use std::net::IpAddr;
 
-#[get("/")]
-async fn root() -> impl Responder {
-    HttpResponse::NotImplemented().body("The website root has not been implemented")
-}
+const WORKDIR: &str = env!("PWD");
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -35,7 +33,9 @@ async fn main() -> std::io::Result<()> {
     println!("Started on {base}");
     HttpServer::new(move || {
         App::new()
-            .service(root)
+            .service(root::root)
+            .service(root::style)
+            .service(root::js)
             .app_data(web::Data::new(conn.clone()))
             .route("/api", web::get().to(api))
     })
