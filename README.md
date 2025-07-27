@@ -2,6 +2,7 @@
 # http-server
 ## running
 **Setup the database and tables beforehand, i currently don't have it automated**
+**Also Setup the "public/" directory, currently src/endpoints/root.rs uses index.html, index.js and index.css. it's just reading the files directly when requested (not storing in memery, altough it would be faster. (#TODO))**
 ```bash
 $ nix run .#release # I normally use recommend the -Lvv 
 # flag while developing for ease of use 
